@@ -25,7 +25,7 @@ if not API_KEYS:
         "(comma-separated if you have more than one)."
     )
 
-MODEL = "gemini-2.0-flash-lite"
+MODEL = "gemini-2.5-flash"
 
 # Status codes that mean "this key is exhausted/invalid, try the next one"
 RETRYABLE_STATUS_CODES = {429, 403, 401}
