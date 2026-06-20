@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+python-dotenv
+google-generativeai
+pymupdf
+python-multipart
+
+# processing pipeline
+ftfy
+clean-text
+presidio-analyzer
+presidio-anonymizer
+spacy
+tiktoken
+langchain-text-splitters
