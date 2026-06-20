@@ -1,10 +1,9 @@
 fastapi
 uvicorn
 python-dotenv
-google-generativeai
+google-genai
 pymupdf
 python-multipart
-
 # processing pipeline
 ftfy
 clean-text
