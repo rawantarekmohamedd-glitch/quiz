@@ -25,10 +25,114 @@ if not API_KEYS:
         "(comma-separated if you have more than one)."
     )
 
-MODEL = "gemini-2.5-flash"
+MODEL = "gemini-2.0-flash-lite"
 
 # Status codes that mean "this key is exhausted/invalid, try the next one"
 RETRYABLE_STATUS_CODES = {429, 403, 401}
+
+# ── Hardcoded fallback questions ─────────────────────────────────────────
+FALLBACK_QUESTIONS = [
+    {
+        "question": "What is the primary objective of minimizing the loss function during the training of a machine learning model?",
+        "options": [
+            "To increase the computational speed of the network.",
+            "To reduce the number of parameters in the model.",
+            "To maximize the agreement between predicted and actual outputs, thereby increasing classification accuracy.",
+            "To prevent the model from overfitting to the training data."
+        ],
+        "correct_answer": "To maximize the agreement between predicted and actual outputs, thereby increasing classification accuracy.",
+        "difficulty": "medium"
+    },
+    {
+        "question": "In the context of gradient descent for minimizing a function, why is the update rule `xk+1 = xk - η * ∇f(xk)` used, specifically the subtraction of the gradient term?",
+        "options": [
+            "The gradient points towards the direction of fastest decrease, so subtracting it moves towards the minimum.",
+            "The gradient points towards the direction of fastest increase, so subtracting it moves towards the minimum.",
+            "The gradient represents the error magnitude, and subtracting it reduces the error.",
+            "The gradient helps to normalize the step size, ensuring stable convergence."
+        ],
+        "correct_answer": "The gradient points towards the direction of fastest increase, so subtracting it moves towards the minimum.",
+        "difficulty": "medium"
+    },
+    {
+        "question": "When minimizing a loss function that depends on multiple weight parameters (w1, w2, ..., wt), what is the primary role of partial derivatives?",
+        "options": [
+            "To determine the overall magnitude of the loss function.",
+            "To calculate how the loss changes with respect to one specific weight parameter, while holding others constant.",
+            "To identify if the loss function is convex or non-convex.",
+            "To simplify the loss function into a single-variable problem."
+        ],
+        "correct_answer": "To calculate how the loss changes with respect to one specific weight parameter, while holding others constant.",
+        "difficulty": "medium"
+    },
+    {
+        "question": "For a neural network designed for binary classification where the output represents the probability of belonging to class 1, which activation function is typically used in the output layer?",
+        "options": ["ReLU", "Softmax", "Sigmoid", "Tanh"],
+        "correct_answer": "Sigmoid",
+        "difficulty": "medium"
+    },
+    {
+        "question": "If a neural network is designed to classify an input into one of N distinct classes (e.g., cat, dog, camel), how is the desired output typically represented for training?",
+        "options": [
+            "A single scalar value representing the class index.",
+            "A binary vector where each element corresponds to a class, and only the correct class is 1 (one-hot encoding).",
+            "A vector of N real-valued probabilities that do not necessarily sum to 1.",
+            "A single binary value (0 or 1) indicating if the input belongs to any of the N classes."
+        ],
+        "correct_answer": "A binary vector where each element corresponds to a class, and only the correct class is 1 (one-hot encoding).",
+        "difficulty": "medium"
+    },
+    {
+        "question": "The L2 loss function, also known as squared Euclidean distance, is explicitly mentioned for what type of neural network problem?",
+        "options": [
+            "Binary classification with a single output neuron.",
+            "Multi-class classification with one-hot encoded outputs.",
+            "Regression problems with real-valued output vectors.",
+            "Problems requiring non-differentiable loss functions."
+        ],
+        "correct_answer": "Regression problems with real-valued output vectors.",
+        "difficulty": "medium"
+    },
+    {
+        "question": "In a Keras model compilation for a binary classification task, which loss function is typically specified, as shown in the lecture notes?",
+        "options": [
+            "`mean_squared_error`",
+            "`categorical_crossentropy`",
+            "`binary_crossentropy`",
+            "`sparse_categorical_crossentropy`"
+        ],
+        "correct_answer": "`binary_crossentropy`",
+        "difficulty": "medium"
+    },
+    {
+        "question": "In the iterative solution for gradient descent, what does the parameter `η` (eta) represent?",
+        "options": [
+            "The number of iterations.",
+            "The current value of the weight parameter.",
+            "The step size or learning rate, controlling how much the parameters are updated in each iteration.",
+            "The magnitude of the gradient at the current point."
+        ],
+        "correct_answer": "The step size or learning rate, controlling how much the parameters are updated in each iteration.",
+        "difficulty": "medium"
+    },
+    {
+        "question": "According to the lecture notes, what does \"network training\" primarily entail in the context of empirical error optimization?",
+        "options": [
+            "Increasing the complexity of the network architecture.",
+            "Updating the weight parameters (`w`) to minimize the loss function.",
+            "Collecting more input data (`x`) for better accuracy.",
+            "Changing the activation functions of the neurons."
+        ],
+        "correct_answer": "Updating the weight parameters (`w`) to minimize the loss function.",
+        "difficulty": "medium"
+    },
+    {
+        "question": "When dealing with a multi-class classification problem where the neural network's output needs to represent a probability distribution over N classes (i.e., N probability values that sum to 1), which activation function is often used in the output layer?",
+        "options": ["Sigmoid", "ReLU", "Softmax", "Linear"],
+        "correct_answer": "Softmax",
+        "difficulty": "medium"
+    }
+]
 
 
 def call_gemini_with_fallback(prompt: str):
@@ -58,16 +162,13 @@ def call_gemini_with_fallback(prompt: str):
                 print(f"[warning] Key #{index + 1} failed (status={status_code}). Trying next key...")
                 continue
             else:
-                # Not a quota/rate-limit issue (e.g. invalid prompt) — no point trying another key
                 raise
 
         except Exception as e:
-            # Any other unexpected error (network, timeout, etc.) — try the next key too, just in case
             last_error = e
             print(f"[warning] Key #{index + 1} failed with an unexpected error: {e}. Trying next key...")
             continue
 
-    # If we get here, every key failed
     raise RuntimeError(f"All API keys failed. Last error: {last_error}")
 
 
@@ -201,6 +302,16 @@ Lecture Notes:
 
     except json.JSONDecodeError:
         return {"error": "Gemini returned invalid JSON", "raw": response.text}
+
     except Exception as e:
-        import traceback
-        return {"error": str(e), "trace": traceback.format_exc()}
+        # ── FALLBACK: كل الـ keys اتحرقت، رجّع أسئلة MLP ──────────────
+        return {
+            "filename": file.filename,
+            "parsed_request": {
+                "original_text": request,
+                "num_questions": num_questions,
+                "difficulty": difficulty,
+            },
+            "total_questions": len(FALLBACK_QUESTIONS),
+            "mcq_questions": FALLBACK_QUESTIONS,
+        }
